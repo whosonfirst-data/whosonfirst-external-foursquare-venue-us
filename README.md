@@ -35,7 +35,7 @@ All of these are valid questions since their inclusion has a meaningful impact o
 
 ## File structure
 
-All data are stored as bzip-compressed CSV files in the `data` directory using the following conventions:
+All data are stored as bzip2-compressed CSV files in the `data` directory using the following conventions:
 
 ```
 + data
@@ -59,7 +59,7 @@ In the event that either `{WHOSONFIRST_REGION_ID}` or `{WHOSONFIRST_LOCALITY_ID}
 
 * While it may seem counter-intuitive to be able to know a locality ID but not its region ID this happens and reflects data that needs to be corrected in the Who's On First administrative dataset. Life is complicated that way.
 
-* The bzip-compressed CSV files in the `data` directory are tracked and stored using [git lfs](https://git-lfs.com/).
+* The bzip2-compressed CSV files in the `data` directory are tracked and stored using [git lfs](https://git-lfs.com/).
 
 ## DuckDB
 
