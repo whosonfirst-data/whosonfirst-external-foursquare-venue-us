@@ -4,7 +4,9 @@ Who's On First ancestry data (parent ID and hierarchy) for Foursquare venues in 
 
 ## Description
 
-This repository contains CSV files mapping individual records in the Foursquare Open Places release, located in the United States, to their Who's On First "parent" and "ancestor" (hierarchy) records. This data was compiled using the [whosonfirst/go-whosonfirst-external](https://github.com/whosonfirst/go-whosonfirst-external?tab=readme-ov-file#assign-ancestors) package to "reverse geocode" each record using the [whosonfirst/go-whosonfirst-spatial-pmtiles](https://github.com/whosonfirst/go-whosonfirst-spatial-pmtiles) package.
+This repository contains CSV files mapping individual records in the [Foursquare Open Places](https://opensource.foursquare.com/os-places/) dataset, located in the United States, to their Who's On First "parent" and "ancestor" (hierarchy) records.
+
+This data was compiled using the [whosonfirst/go-whosonfirst-external](https://github.com/whosonfirst/go-whosonfirst-external?tab=readme-ov-file#assign-ancestors) package to "reverse geocode" each record using the [whosonfirst/go-whosonfirst-spatial-pmtiles](https://github.com/whosonfirst/go-whosonfirst-spatial-pmtiles) package.
 
 Data is encoded as CSV rows with the following headers:
 
@@ -57,7 +59,7 @@ _Note that while it seems counter-intuitive to be able to know a locality ID but
 
 ## DuckDB
 
-These CSV files are meant to be "useable" from DuckDB or other similar database systems.
+These CSV files are meant to be "useable" from [DuckDB](https://duckdb.org/docs/data/csv/overview.html) or other similar database systems.
 
 ```
 D DESCRIBE(SELECT * FROM read_csv('us-85680575-101734683.csv'));
@@ -74,6 +76,8 @@ D DESCRIBE(SELECT * FROM read_csv('us-85680575-101734683.csv'));
 │ wof:parent_id      │ BIGINT      │ YES     │         │         │         │
 └────────────────────┴─────────────┴─────────┴─────────┴─────────┴─────────┘
 ```
+
+_Note: Unfortunately, DuckDB [does not support reading bz2-compressed CSV files yet](https://github.com/duckdb/duckdb/discussions/12232) which means you will need to decompress the files in this repository before using them. This is not ideal but because the uncompressed CSV data is so big it is a recognized "trade-off"._
 
 For example:
 
