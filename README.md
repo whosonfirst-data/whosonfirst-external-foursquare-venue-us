@@ -8,7 +8,7 @@ This repository contains CSV files mapping individual records in the Foursquare 
 
 Data is encoded as CSV rows with the following headers:
 
-| Header | | Notes |
+| Header | Notes |
 | --- | --- |
 | external:geometry | The WKT-encoded geometry for the record. |
 | external:id | The unique ID assigned to the record (by Foursqure) |
