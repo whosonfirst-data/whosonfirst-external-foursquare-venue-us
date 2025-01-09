@@ -83,7 +83,9 @@ D DESCRIBE(SELECT * FROM read_csv('us-85680575-101734683.csv'));
 
 _Note: Unfortunately, DuckDB [does not support reading bz2-compressed CSV files yet](https://github.com/duckdb/duckdb/discussions/12232) which means you will need to decompress the files in this repository before using them. This is not ideal but because the uncompressed CSV data is so big it is a recognized "trade-off"._
 
-For example:
+### Example (basic)
+
+Query for Foursquare venues parented by the localit of [Cruz Bay](https://spelunker.whosonfirst.org/id/101734683) in the Virgin Islands:
 
 ```
 D SELECT "external:id"  FROM read_csv(['us-85680575-101734683.csv', 'us-85681227-101734613.csv']) WHERE JSON("wof:hierarchies")[0]."locality_id" = 101734683 LIMIT 10;
@@ -105,6 +107,8 @@ D SELECT "external:id"  FROM read_csv(['us-85680575-101734683.csv', 'us-85681227
 │         10 rows          │
 └──────────────────────────┘
 ```
+
+### Example (crosswalk)
 
 And to be something which can be used in conjunction with the source Foursquare data. For example here are 10 Foursquare places that are in the locality of [Cruz Bay](https://spelunker.whosonfirst.org/id/101734683) in the Virgin Islands:
 
@@ -128,6 +132,74 @@ D SELECT w."external:id", f.name  FROM read_csv(['us-85680575-101734683.csv', 'u
 │ 10 rows                                  2 columns │
 └────────────────────────────────────────────────────┘
 ```
+
+### Example (search)
+
+This example demonstrates how to create and persist a searchable ([FTS](https://duckdb.org/docs/extensions/full_text_search.html)) DuckDB database for all the Foursquare venues in [San Francisco](https://spelunker.whosonfirst.org/id/85922583) (California):
+
+First copy the Foursquare - Who's On First mapping file to the current working directory and uncompress it:
+
+```
+$> cd /usr/local/data/whosonfirst-external-foursquare-venue-us/data/85688637/us-85688637-85922583.csv.bz2 .
+$> bunzip us-85688637-85922583.csv.bz2
+```
+
+Second, start DuckDB and create a new search table joining the data in the mapping file with the Foursquare places parquet files. Create a full-text search (fts) index on the table, query it to prove it works and then export the entire database to a directory called `/usr/local/data/sf-search`.
+
+```
+$> duckdb
+v1.1.3 19864453f7
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+
+D CREATE TABLE search AS SELECT f.fsq_place_id AS id, f.name AS name, f.address AS address FROM read_parquet('/usr/local/data/foursquare/parquet/*.parquet') f, read_csv('us-85688637-85922583.csv') w WHERE f.fsq_place_id = w."external:id";
+
+D PRAGMA create_fts_index('search', 'id', 'name', 'address');
+
+D SELECT fts_main_search.match_bm25(id, 'volcano') AS score, id, name, address FROM search WHERE score IS NOT NULL ORDER BY score DESC;
+┌────────────────────┬──────────────────────────┬────────────────────────┬──────────────────┐
+│       score        │            id            │          name          │     address      │
+│       double       │         varchar          │        varchar         │     varchar      │
+├────────────────────┼──────────────────────────┼────────────────────────┼──────────────────┤
+│  5.660612435591871 │ 6355aa5ec60fa245371ed2da │ Volcano Kimchi         │                  │
+│  5.660612435591871 │ 604d00622944e85926467694 │ Volcano Kimchi         │                  │
+│ 4.5301393234755425 │ 66f87e8a4ccc8b122de9ecd5 │ Volcano Kimchi         │ 1074 Illinois St │
+│   4.11885399466349 │ 49f2b815f964a520626a1fe3 │ Volcano Curry of Japan │ 5454 Geary Blvd  │
+└────────────────────┴──────────────────────────┴────────────────────────┴──────────────────┘
+
+D EXPORT DATABASE '/usr/local/data/sf-search' (FORMAT PARQUET);
+```
+
+Exit DuckDb and examine the newly created database folder:
+
+```
+$> du -h /usr/local/data/sf-search/
+ 13M	/usr/local/data/sf-search/
+```
+
+Start DuckDB again, import the database and perform another query:
+
+```
+$> duckdb
+v1.1.3 19864453f7
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+D IMPORT DATABASE '/usr/local/data/sf-search';
+D SELECT fts_main_search.match_bm25(id, 'volcano') AS score, id, name, address FROM search WHERE score IS NOT NULL ORDER BY score DESC;
+┌────────────────────┬──────────────────────────┬────────────────────────┬──────────────────┐
+│       score        │            id            │          name          │     address      │
+│       double       │         varchar          │        varchar         │     varchar      │
+├────────────────────┼──────────────────────────┼────────────────────────┼──────────────────┤
+│  5.660612435591871 │ 6355aa5ec60fa245371ed2da │ Volcano Kimchi         │                  │
+│  5.660612435591871 │ 604d00622944e85926467694 │ Volcano Kimchi         │                  │
+│ 4.5301393234755425 │ 66f87e8a4ccc8b122de9ecd5 │ Volcano Kimchi         │ 1074 Illinois St │
+│   4.11885399466349 │ 49f2b815f964a520626a1fe3 │ Volcano Curry of Japan │ 5454 Geary Blvd  │
+└────────────────────┴──────────────────────────┴────────────────────────┴──────────────────┘
+```
+
+It does not appear to be possible to copy the `search` table AND the FTS index to a single standalone Parquet file to be queried using the `read_parquet(...)` syntax. Or if it is, I haven't figured out the syntax and I would welcome suggestions and pointers. It is possible to export just the (search) table and rebuild the index, in memory, at runtime.
 
 ## See also
 
