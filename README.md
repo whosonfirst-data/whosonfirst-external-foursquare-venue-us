@@ -144,7 +144,7 @@ $> cd /usr/local/data/whosonfirst-external-foursquare-venue-us/data/85688637/us-
 $> bunzip us-85688637-85922583.csv.bz2
 ```
 
-Second, start DuckDB and create a new search table joining the data in the mapping file with the Foursquare places parquet files. Create a full-text search (fts) index on the table, query it to prove it works and then export the entire database to a directory called `/usr/local/data/sf-search`.
+Second, start DuckDB and create a new search table joining the data in the mapping file with the Foursquare places parquet files. Create a full-text search (FTS) index on the table, query it to prove it works and then export the entire database to a directory called `/usr/local/data/sf-search`.
 
 ```
 $> duckdb
