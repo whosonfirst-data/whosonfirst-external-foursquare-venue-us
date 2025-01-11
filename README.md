@@ -226,7 +226,7 @@ Spot-checking the record for "Handroll Project" which, you might know if you liv
 $> pt2f -latitude 37.749129750195024 -longitude -122.42012729046951 | show -
 ```
 
-Shows us the the Foursquare coordinate data for that venue is incorrect:
+Shows us the the Foursquare coordinate data for that venue is incorrect and off by nine blocks from the address they've recorded (which is correct):
 
 ![](docs/images/foursquare-wof-handroll.png)
 
