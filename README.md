@@ -223,13 +223,14 @@ D SELECT fsq_place_id, name, address, JSON("wof:hierarchies")[0].neighbourhood_i
 Spot-checking the record for "Handroll Project" which, you might know if you live in San Francisco, should not parented by La Lengua:
 
 ```
-$> [pt2f](https://github.com/aaronland/go-tools/blob/main/cmd/pt2f/main.go) -latitude 37.749129750195024 -longitude -122.42012729046951 | show -
+$> pt2f -latitude 37.749129750195024 -longitude -122.42012729046951 | show -
 ```
 
 Shows us the the Foursquare coordinate data for that venue is incorrect:
 
 ![](docs/images/foursquare-wof-handroll.png)
 
+_Where `pt2f` and `show` are part of the [aaronland/go-tools](https://spelunker.whosonfirst.org/id/102112179) and [sfomuseum/go-geojson-show](https://github.com/sfomuseum/go-geojson-show?tab=readme-ov-file#show) packages, respectively._
 
 ### Example (search)
 
