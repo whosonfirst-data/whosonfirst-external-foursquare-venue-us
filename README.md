@@ -66,6 +66,12 @@ In the event that either `{WHOSONFIRST_REGION_ID}` or `{WHOSONFIRST_LOCALITY_ID}
 These CSV files are meant to be "useable" from [DuckDB](https://duckdb.org/docs/data/csv/overview.html) or other similar database systems.
 
 ```
+$> duckdb
+v1.1.3 19864453f7
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+
 D DESCRIBE(SELECT * FROM read_csv('us-85680575-101734683.csv'));
 ┌────────────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
 │    column_name     │ column_type │  null   │   key   │ default │  extra  │
@@ -88,6 +94,12 @@ _Note: Unfortunately, DuckDB [does not support reading bz2-compressed CSV files 
 Query for Foursquare venues parented by the localit of [Cruz Bay](https://spelunker.whosonfirst.org/id/101734683) in the Virgin Islands:
 
 ```
+$> duckdb
+v1.1.3 19864453f7
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+
 D SELECT "external:id"  FROM read_csv(['us-85680575-101734683.csv', 'us-85681227-101734613.csv']) WHERE JSON("wof:hierarchies")[0]."locality_id" = 101734683 LIMIT 10;
 ┌──────────────────────────┐
 │       external:id        │
@@ -113,6 +125,12 @@ D SELECT "external:id"  FROM read_csv(['us-85680575-101734683.csv', 'us-85681227
 And to be something which can be used in conjunction with the source Foursquare data. For example here are 10 Foursquare places that are in the locality of [Cruz Bay](https://spelunker.whosonfirst.org/id/101734683) in the Virgin Islands:
 
 ```
+$> duckdb
+v1.1.3 19864453f7
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+
 D SELECT w."external:id", f.name  FROM read_csv(['us-85680575-101734683.csv', 'us-85681227-101734613.csv']) w, read_parquet('/usr/local/data/foursquare/parquet/*.parquet') f  WHERE f.fsq_place_id = w."external:id" AND JSON("wof:hierarchies")[0]."locality_id" = 101734683 LIMIT 10;
 ┌──────────────────────────┬─────────────────────────┐
 │       external:id        │          name           │
@@ -132,6 +150,86 @@ D SELECT w."external:id", f.name  FROM read_csv(['us-85680575-101734683.csv', 'u
 │ 10 rows                                  2 columns │
 └────────────────────────────────────────────────────┘
 ```
+
+### Example (merge)
+
+Merge a slice of the Foursquare venues dataset with the parent and hierarchy information for the city of [San Francisco](https://spelunker.whosonfirst.org/id/85922583):
+
+```
+$> duckdb
+v1.1.3 19864453f7
+Enter ".help" for usage hints.
+Connected to a transient in-memory database.
+Use ".open FILENAME" to reopen on a persistent database.
+
+D COPY (SELECT f.*, w.geohash, w."wof:country", w."wof:parent_id", w."wof:hierarchies" FROM read_parquet('/usr/local/data/foursquare/parquet/*.parquet') f, read_csv('/usr/local/data/fsq-us-85688637-85922583.csv') w WHERE f.fsq_place_id = w."external:id") TO 'foursquare-us-85688637-85922583.parquet' (COMPRESSION ZSTD);
+
+D DESCRIBE (SELECT * FROM read_parquet('foursquare-us-85688637-85922583.parquet'));
+┌─────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬─────────┬─────────┬─────────┬─────────┐
+│   column_name   │                                                            column_type                                                            │  null   │   key   │ default │  extra  │
+│     varchar     │                                                              varchar                                                              │ varchar │ varchar │ varchar │ varchar │
+├─────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┼─────────┼─────────┼─────────┼─────────┤
+│ id              │ VARCHAR                                                                                                                           │ YES     │         │         │         │
+│ geometry        │ BLOB                                                                                                                              │ YES     │         │         │         │
+│ bbox            │ STRUCT(xmin FLOAT, xmax FLOAT, ymin FLOAT, ymax FLOAT)                                                                            │ YES     │         │         │         │
+│ version         │ INTEGER                                                                                                                           │ YES     │         │         │         │
+│ sources         │ STRUCT(property VARCHAR, dataset VARCHAR, record_id VARCHAR, update_time VARCHAR, confidence DOUBLE)[]                            │ YES     │         │         │         │
+│ names           │ STRUCT("primary" VARCHAR, common MAP(VARCHAR, VARCHAR), rules STRUCT(variant VARCHAR, "language" VARCHAR, "value" VARCHAR, "bet…  │ YES     │         │         │         │
+│ categories      │ STRUCT("primary" VARCHAR, alternate VARCHAR[])                                                                                    │ YES     │         │         │         │
+│ confidence      │ DOUBLE                                                                                                                            │ YES     │         │         │         │
+│ websites        │ VARCHAR[]                                                                                                                         │ YES     │         │         │         │
+│ socials         │ VARCHAR[]                                                                                                                         │ YES     │         │         │         │
+│ emails          │ VARCHAR[]                                                                                                                         │ YES     │         │         │         │
+│ phones          │ VARCHAR[]                                                                                                                         │ YES     │         │         │         │
+│ brand           │ STRUCT(wikidata VARCHAR, "names" STRUCT("primary" VARCHAR, common MAP(VARCHAR, VARCHAR), rules STRUCT(variant VARCHAR, "languag…  │ YES     │         │         │         │
+│ addresses       │ STRUCT(freeform VARCHAR, locality VARCHAR, postcode VARCHAR, region VARCHAR, country VARCHAR)[]                                   │ YES     │         │         │         │
+│ geohash         │ VARCHAR                                                                                                                           │ YES     │         │         │         │
+│ wof:country     │ VARCHAR                                                                                                                           │ YES     │         │         │         │
+│ wof:parent_id   │ VARCHAR                                                                                                                           │ YES     │         │         │         │
+│ wof:hierarchies │ VARCHAR                                                                                                                           │ YES     │         │         │         │
+├─────────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴─────────┴─────────┴─────────┴─────────┤
+│ 18 rows                                                                                                                                                                           6 columns │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+And then using the new `foursquare-us-85688637-85922583.parquet` to search for restaurants in the neighbourhood of [La Lengua](https://spelunker.whosonfirst.org/id/102112179):
+
+```
+D SELECT fsq_place_id, name, address, JSON("wof:hierarchies")[0].neighbourhood_id AS neighbourhood, latitude, longitude, date_closed FROM read_parquet('foursquare-us-85688637-85922583.parquet') WHERE neighbourhood=102112179 AND JSON(fsq_category_labels)[0]  LIKE '%Dining and Drinking > Restaurant%';
+┌──────────────────────────┬───────────────────────────────────────────────────────────┬─────────────────────────┬───────────────┬────────────────────┬─────────────────────┬─────────────┐
+│       fsq_place_id       │                           name                            │         address         │ neighbourhood │      latitude      │      longitude      │ date_closed │
+│         varchar          │                          varchar                          │         varchar         │     json      │       double       │       double        │   varchar   │
+├──────────────────────────┼───────────────────────────────────────────────────────────┼─────────────────────────┼───────────────┼────────────────────┼─────────────────────┼─────────────┤
+│ 49e82080f964a52043651fe3 │ Shiso                                                     │ 3452 Mission St         │ 102112179     │  37.74151107474106 │ -122.42275836428959 │             │
+│ 621addc87ef4586cf136210f │ Handroll Project                                          │ 598 Guerrero St         │ 102112179     │ 37.749129750195024 │ -122.42012729046951 │             │
+│ 538e9099498e6cb5c9c8c44c │ Chans Cuisine                                             │ 3486 Mission St         │ 102112179     │  37.74098496591807 │ -122.42322883483135 │             │
+│ 4f43690119834bc91f56a0e0 │ Intimate Catering                                         │ 709 San Jose Ave        │ 102112179     │ 37.743690807207656 │ -122.42245723445374 │             │
+│ 6488c42f32a4651d3b5f0043 │ Dosa Corner Indian Cuisine                                │ 1499 Valencia St        │ 102112179     │ 37.749129750195024 │ -122.42012729046951 │             │
+│ 4e4d0707bd413c4cc66e17f9 │ Cafe Arguello                                             │ 2832 Mission St         │ 102112179     │ 37.751526662778815 │ -122.41869236022052 │             │
+│ 4a2b6e95f964a520cf961fe3 │ Red Cafe                                                  │ 2894 Mission St         │ 102112179     │  37.75072935187312 │ -122.41836375085727 │             │
+│ 5d1014a744627d0023b0c98c │ Bac Lieu Restaurant                                       │ 3216 Mission St         │ 102112179     │  37.74528560251274 │ -122.42040183307378 │             │
+│ 57abdbbf498e050aca7c3f8b │ Firepie                                                   │ 3498 Cesar Chavez       │ 102112179     │ 37.748332854085916 │ -122.41986525188636 │             │
+...
+│ 49e0c8c0f964a5206f611fe3 │ La Traviata                                               │ 2854 Mission St         │ 102112179     │   37.7512874341159 │ -122.41841286461101 │             │
+│ 52fc58f2498e69bb0c138b25 │ ICHI Sushi + NI Bar                                       │ 3282 Mission St         │ 102112179     │  37.74432783375875 │ -122.42086357150288 │ 2017-01-10  │
+│ 4f32798a19836c91c7db6197 │ Rosies Restaurant                                         │ 2976 Mission St         │ 102112179     │  37.74941770225027 │ -122.41849616424369 │             │
+│ 42accc80f964a52039251fe3 │ Emmy's Spaghetti Shack                                    │ 3230 Mission St         │ 102112179     │  37.74502182026873 │  -122.4203463391657 │             │
+│ 4a94231ef964a5207f2020e3 │ Pi Bar                                                    │ 1432 Valencia St        │ 102112179     │  37.74997691324565 │ -122.42059223044018 │ 2023-04-07  │
+├──────────────────────────┴───────────────────────────────────────────────────────────┴─────────────────────────┴───────────────┴────────────────────┴─────────────────────┴─────────────┤
+│ 68 rows (40 shown)                                                                                                                                                            7 columns │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+Spot-checking the record for "Handroll Project" which, you might know if you live in San Francisco, should not parented by La Lengua:
+
+```
+$> [pt2f](https://github.com/aaronland/go-tools/blob/main/cmd/pt2f/main.go) -latitude 37.749129750195024 -longitude -122.42012729046951 | show -
+```
+
+Shows us the the Foursquare coordinate data for that venue is incorrect:
+
+![](docs/images/foursquare-wof-handroll.png)
+
 
 ### Example (search)
 
@@ -186,6 +284,7 @@ v1.1.3 19864453f7
 Enter ".help" for usage hints.
 Connected to a transient in-memory database.
 Use ".open FILENAME" to reopen on a persistent database.
+
 D IMPORT DATABASE '/usr/local/data/sf-search';
 D SELECT fts_main_search.match_bm25(id, 'volcano') AS score, id, name, address FROM search WHERE score IS NOT NULL ORDER BY score DESC;
 ┌────────────────────┬──────────────────────────┬────────────────────────┬──────────────────┐
